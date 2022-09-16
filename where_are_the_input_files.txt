@@ -1,0 +1,9 @@
+Jim Cronan
+September 16, 2022
+
+GitHub has started regulating file size in repositories and does not permit files greater than 25 MB. This means that input files
+should be stored elsewhere. Best option for this is to create a mirror directory for GitHub repositories on Box/Pinyon
+and sync them with the Desktop application on any machine that is running scripts on the GitHub repo.
+Input files for this repository can be found at
+Box/01.james.cronan Workspace/Research/UW_PHD/Chapter_5_FDM/GitHub_File_Storage/...
+ 

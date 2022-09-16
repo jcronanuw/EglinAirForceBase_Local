@@ -1,0 +1,303 @@
+Author: James Cronan
+Organization: University of Washington
+Date: 16-Feb-2021
+Purpose: these notes describe efforts to remotely launch AWS EC2 instances for the FDM model I am running for my
+PhD dissertation.
+
+------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------
+START
+
+February 16, 2021
+
+------------------------------------------------------------------------------------------------
+launch-simulation.sh
+CHANGES
+#old (pre-2019) AMI: ami-06775690a658b0847
+#old (pre 2019) Security Group "sg-06cb1607a02875a8e"
+#Original Structure of new UW AWS account launch language
+#elif [ $2 == "jcronantest" ]
+#  then
+#    AWS_KEY_NAME="--key-name eafb_2020"
+#    AWS_PROFILE="--profile jcronantest"
+#    IAM_INSTANCE_PROFILE="--iam-instance-profile Name=jcronan-wildfire-sim"
+
+#Instance Type needed for full simulation: r3.large
+#This needs to be reset when you are ready to launch full simulations because you are using the free tier
+#currently.
+------------------------------------------------------------------------------------------------
+
+I have been trying to remotely launch EC2 instances again with no luck. I was doing this routinely many years ago, but
+was no longer able to do so because new computers are not configured correctly and I shifted to a new
+AWS account. Today I was able to remotely launch an instance. These notes show what steps I took to make this
+happen.
+1) In the past I had always used PowerShell to remotely launch instances with this code:
+$ sh ./launch-simulation.sh master_sim_params.txt personal
+I was no longer able to do this with my new Forest Service laptop or personal laptop because the .sh command
+was not recognized. Seems like this was because I did not have a Unix environment or BASH installed on my
+computers. I was not able to do this on my Forest Service laptop because there is, as of 2020, a cumbersome
+approval process for downloading software that is not listed in the FS software library. I am also not able to
+run PowerShell as an administrator. I did download these programs on my personal laptop, but they did not 
+resolve the problem.
+
+#Error message when I try to launch EC2 with .sh command in PowerShell
+> PS C:\Users\james\Documents\GitHub\EglinAirForceBase\aws-launcher> $ sh ./launch-simulation.sh master_sim_params.txt jcronantest
+> : The term '$' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is
+> correct and try again.
+> At line:1 char:1
+> + $ sh ./launch-simulation.sh master_sim_params.txt jcronantest
+> + ~
+>     + CategoryInfo          : ObjectNotFound: ($:String) [], CommandNotFoundException
+>     + FullyQualifiedErrorId : CommandNotFoundException
+
+To run the .sh command on Windows I followed the instructions here:
+https://itsfoss.com/install-bash-on-windows/
+This did not work.
+
+Another option I tried was installing cygwin
+https://www.cygwin.com/
+This solution was listed on StackOverflow
+https://stackoverflow.com/questions/26522789/how-to-run-sh-on-windows-command-prompt/26523241
+This did not work, although I am not sure if I did this correctly because I could not find information on
+how to enable cygwin in PowerShell.
+
+Another option I tried was installing Git Bash
+Solution was listed here:
+https://superuser.com/questions/120045/how-to-execute-sh-file-on-windows
+This option worked.
+
+Now I was able to run the shell script (.sh command), but there were several other errors.
+------------------------------------------------------------------------------------------------
+Error 1
+I first tried running a simulation with the new UW account that Joel Dubowy set up last year.
+The jcronantest IAM User role was set up within the last month on that account.
+james@DESKTOP-F3AGAVQ MINGW64 ~/Documents/GitHub/EglinAirForceBase/aws-launcher (master)
+$ sh ./launch-simulation.sh master_sim_params.txt jcronantest
+>
+> Simulation "21Feb16-115827" will launch 1 EC2 instances.
+> Multiple EC2 instances will be launched and R will start running as soon as initiated.
+> Do you wish to kick off this simulation? [Y/n/D (dryrun)] Y
+> 
+> The config profile (jcronantest) could not be found
+
+My initial thought was a parameter in the launch script did not contain needed info for the new account
+i.e., it was parameterized for accounts (personal and escience institute) I used in the past.
+So I tried launching an instance with my personal account
+
+------------------------------------------------------------------------------------------------
+Error 2
+> james@DESKTOP-F3AGAVQ MINGW64 ~/Documents/GitHub/EglinAirForceBase/aws-launcher (master)
+$ sh ./launch-simulation.sh master_sim_params.txt personal
+> 
+> Simulation "21Feb16-120044" will launch 1 EC2 instances.
+> Multiple EC2 instances will be launched and R will start running as soon as initiated.
+> Do you wish to kick off this simulation? [Y/n/D (dryrun)] Y
+> 
+> An error occurred (InvalidGroup.NotFound) when calling the RunInstances operation: The security group 
+> 'sg-06cb1607a02875a8e' does not exist in VPC 'vpc-36c65e4e
+
+This error is referencing a security group that is not part of my personal account or the new UW account.
+It is likely an eScience Institute or AirFire account. To fix this I changed the security group number
+in the shell script to the new UW account. When I reran the launch script from my personal account I did
+not receive this error indicating the problem was fixed.
+
+------------------------------------------------------------------------------------------------
+Error 3
+> james@DESKTOP-F3AGAVQ MINGW64 ~/Documents/GitHub/EglinAirForceBase/aws-launcher (master)
+$ sh ./launch-simulation.sh master_sim_params.txt personal
+> 
+> Simulation "21Feb16-130327" will launch 1 EC2 instances.
+> Multiple EC2 instances will be launched and R will start running as soon as initiated.
+> Do you wish to kick off this simulation? [Y/n/D (dryrun)] Y
+> 
+> An error occurred (InvalidParameterValue) when calling the RunInstances operation: Value (wildfire-simulation)
+> for parameter iamInstanceProfile.name is invalid. Invalid IAM Instance Profile name
+
+This attempt yielded another error. This error seemed to be caused by incompatible credentials in the aws
+directory. That is, the directory contains profile credentials for my UW account whereas the launch
+code would have tasked the shell script with running the simulation with my personal account, which does not
+have credentials on my personal laptop. Rather than trying to resolve this error, I went back to the original
+error I encountered.
+
+------------------------------------------------------------------------------------------------
+Error 4
+I then ran the launch code using the new UW AWS account rather than my personal account.
+james@DESKTOP-F3AGAVQ MINGW64 ~/Documents/GitHub/EglinAirForceBase/aws-launcher (master)
+$ sh ./launch-simulation.sh master_sim_params.txt jcronantest
+> 
+> Simulation "21Feb16-132502" will launch 1 EC2 instances.
+> Multiple EC2 instances will be launched and R will start running as soon as initiated.
+> Do you wish to kick off this simulation? [Y/n/D (dryrun)] Y
+> 
+> An error occurred (InvalidSubnetID.NotFound) when calling the RunInstances operation: The subnet ID 'subnet-15284970' does not exist
+
+This error was relatively easy to diagnose. The subnet ID was either from AirFire or eScience Inst.
+I deleted this line in the shell script
+Old
+elif [ $2 == "jcronantest" ]
+  then
+    AWS_KEY_NAME="--key-name eafb_2020"
+    SUBNET_ID="--subnet-id subnet 15284970"
+    AWS_PROFILE="--profile default"
+    IAM_INSTANCE_PROFILE="--iam-instance-profile Name=jcronantest"
+
+New
+elif [ $2 == "jcronantest" ]
+  then
+    AWS_KEY_NAME="--key-name eafb_2020"
+    AWS_PROFILE="--profile default"
+    IAM_INSTANCE_PROFILE="--iam-instance-profile Name=jcronantest"
+
+------------------------------------------------------------------------------------------------
+Back to Error 1
+The bash script listed the AWS profile as jcronantest and the IAM user profile as 
+"jcronan-wildfire-sim". I realized that the .aws/configuration lists the AWS profile
+as [default] and on the AWS IAM Console jcronantest is listed as an IAM Role.
+I think this error at least partially occurred because I did not follow Brian's directions for setting
+up the .aws directory, but there may also have been some misunderstanding on my part as far as what
+AWS console settings were supposed to be names "jcronantest" and "cronan-wildfire-sim".
+At any rate these were the changes I made in launch-simulation.sh
+Old
+#elif [ $2 == "jcronantest" ]
+#  then
+#    AWS_KEY_NAME="--key-name eafb_2020"
+#    SUBNET_ID="--subnet-id subnet 15284970"
+#    AWS_PROFILE="--profile jcronantest"
+#    IAM_INSTANCE_PROFILE="--iam-instance-profile Name=jcronan-wildfire-sim"
+
+New
+elif [ $2 == "jcronantest" ]
+  then
+    AWS_KEY_NAME="--key-name eafb_2020"
+    SUBNET_ID="--subnet-id subnet 15284970"
+    AWS_PROFILE="--profile default"
+    IAM_INSTANCE_PROFILE="--iam-instance-profile Name=jcronantest"
+
+
+This worked!
+------------------------------------------------------------------------------------------------
+Successful simulation launch.
+
+james@DESKTOP-F3AGAVQ MINGW64 ~/Documents/GitHub/EglinAirForceBase/aws-launcher (master)
+$ sh ./launch-simulation.sh master_sim_params.txt jcronantest
+> 
+> Simulation "21Feb16-134122" will launch 1 EC2 instances.
+> Multiple EC2 instances will be launched and R will start running as soon as initiated.
+> Do you wish to kick off this simulation? [Y/n/D (dryrun)] Y
+> {
+>     "Groups": [],
+>     "Instances": [
+>         {
+>             "AmiLaunchIndex": 0,
+>             "ImageId": "ami-0ff4cc0162300f6df",
+>             "InstanceId": "i-04c7998ee383dd9cc",
+>             "InstanceType": "r3.large",
+>             "KeyName": "eafb_2020",
+>             "LaunchTime": "2021-02-16T21:41:27+00:00",
+>             "Monitoring": {
+>                 "State": "disabled"
+>             },
+>             "Placement": {
+>                 "AvailabilityZone": "us-west-2c",
+>                 "GroupName": "",
+>                 "Tenancy": "default"
+>             },
+>             "PrivateDnsName": "ip-172-31-11-69.us-west-2.compute.internal",
+>             "PrivateIpAddress": "172.31.11.69",
+>             "ProductCodes": [],
+>             "PublicDnsName": "",
+>             "State": {
+>                 "Code": 0,
+>                 "Name": "pending"
+>             },
+>             "StateTransitionReason": "",
+>             "SubnetId": "subnet-89b87cd4",
+>             "VpcId": "vpc-36c65e4e",
+>             "Architecture": "x86_64",
+>             "BlockDeviceMappings": [],
+>             "ClientToken": "c83015cf-5278-4831-b5aa-43cd9e1dfd02",
+>             "EbsOptimized": false,
+>             "EnaSupport": true,
+>             "Hypervisor": "xen",
+>             "IamInstanceProfile": {
+>                 "Arn": "arn:aws:iam::571569872008:instance-profile/jcronantest",
+>                 "Id": "AIPAYKFBYDSEJU4S2WURE"
+>             },
+>             "NetworkInterfaces": [
+>                 {
+>                     "Attachment": {
+>                         "AttachTime": "2021-02-16T21:41:27+00:00",
+>                         "AttachmentId": "eni-attach-00c0420b409740864",
+>                         "DeleteOnTermination": true,
+>                         "DeviceIndex": 0,
+>                         "Status": "attaching",
+>                         "NetworkCardIndex": 0
+>                     },
+>                     "Description": "",
+>                     "Groups": [
+>                         {
+>                             "GroupName": "launch-wizard-1",
+>                             "GroupId": "sg-0ab8431212d35629c"
+>                         }
+>                     ],
+>                     "Ipv6Addresses": [],
+>                     "MacAddress": "0a:d7:76:4d:fc:b3",
+>                     "NetworkInterfaceId": "eni-067352318b703e477",
+>                     "OwnerId": "571569872008",
+>                     "PrivateDnsName": "ip-172-31-11-69.us-west-2.compute.internal",
+>                     "PrivateIpAddress": "172.31.11.69",
+>                     "PrivateIpAddresses": [
+>                         {
+>                             "Primary": true,
+>                             "PrivateDnsName": "ip-172-31-11-69.us-west-2.compute.internal",
+>                             "PrivateIpAddress": "172.31.11.69"
+>                         }
+>                     ],
+>                     "SourceDestCheck": true,
+>                     "Status": "in-use",
+>                     "SubnetId": "subnet-89b87cd4",
+>                     "VpcId": "vpc-36c65e4e",
+>                     "InterfaceType": "interface"
+>                 }
+>             ],
+>             "RootDeviceName": "/dev/xvda",
+>             "RootDeviceType": "ebs",
+>             "SecurityGroups": [
+>                 {
+>                     "GroupName": "launch-wizard-1",
+>                     "GroupId": "sg-0ab8431212d35629c"
+>                 }
+>             ],
+>             "SourceDestCheck": true,
+>             "StateReason": {
+>                 "Code": "pending",
+>                 "Message": "pending"
+>             },
+>             "VirtualizationType": "hvm",
+>             "CpuOptions": {
+>                 "CoreCount": 1,
+>                 "ThreadsPerCore": 2
+>             },
+>             "CapacityReservationSpecification": {
+>                 "CapacityReservationPreference": "open"
+>             },
+>             "MetadataOptions": {
+>                 "State": "pending",
+>                 "HttpTokens": "optional",
+>                 "HttpPutResponseHopLimit": 1,
+>                 "HttpEndpoint": "enabled"
+>             },
+>             "EnclaveOptions": {
+>                 "Enabled": false
+>             }
+>         }
+>     ],
+>     "OwnerId": "571569872008",
+>     "ReservationId": "r-04387e996f5a8e3e4"
+> }
+
+END
+------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------
+
+
